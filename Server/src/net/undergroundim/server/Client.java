@@ -18,6 +18,21 @@ public class Client {
 	private int status;
 	private boolean online;
 	
+	/**
+	 * Construct a new client.
+	 * 
+	 * @param user_id
+	 * @param username
+	 * @param screen_name
+	 * @param email
+	 * @param age
+	 * @param sex
+	 * @param location
+	 * @param about
+	 * @param made_date
+	 * @param status
+	 * @param online
+	 */
 	public Client(int user_id, String username, String screen_name, String email, byte age, byte sex, String location, String about, String made_date, int status, boolean online){
 		this.user_id = user_id;
 		this.username = username;

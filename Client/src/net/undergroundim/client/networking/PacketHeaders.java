@@ -35,7 +35,9 @@ public enum PacketHeaders {
 	SERVER_PERMISSIONS("25ª"),
 	NUDGE("26ª"),
 	USER_WRITING("27ª"),
-	CHAT_SEND("28ª");
+	SESSION_CLOSED("28ª"),
+	GROUP_ADD("29ª"),
+	GROUP_REMOVE("30ª");
 	
 	private final String header;
 	

@@ -19,8 +19,8 @@ import net.undergroundim.server.networking.JDBC;
  *
  */
 public class Constants {
-	private static double version = 1.009;
-	private static String buildDate = "27/Sep/2012";
+	private static double version = 1.011;
+	private static String buildDate = "09/Oct/2012";
 	
 	/**
 	 * Configure these settings through
@@ -147,7 +147,7 @@ public class Constants {
 	 */
 	public static ClientThread getClient(String username){
 		for(ClientThread c : clients)
-			if(c.client.getUsername().equals(username))
+			if(c.client != null && c.client.getUsername().equals(username))
 				return c;
 		
 		return null;
@@ -161,7 +161,7 @@ public class Constants {
 	 */
 	public static ClientThread getClient(int user_id){
 		for(ClientThread c : clients)
-			if(c.client.getUser_id() == user_id)
+			if(c.client != null && c.client.getUser_id() == user_id)
 				return c;
 		
 		return null;
@@ -175,7 +175,7 @@ public class Constants {
 	 */
 	public static boolean isClientOnline(int user_id){
 		for(ClientThread c : clients)
-			if(c.client.getUser_id() == user_id)
+			if(c.client != null && c.client.getUser_id() == user_id)
 				return true;
 		
 		return false;
@@ -189,7 +189,7 @@ public class Constants {
 	 */
 	public static boolean isClientOnline(String username){
 		for(ClientThread c : clients)
-			if(c.client.getUsername().equals(username))
+			if(c.client != null && c.client.getUsername().equals(username))
 				return true;
 		
 		return false;

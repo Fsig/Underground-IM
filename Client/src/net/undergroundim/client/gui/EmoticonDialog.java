@@ -354,6 +354,11 @@ public class EmoticonDialog extends JDialog implements WindowFocusListener, Acti
 		this.add(wilted_smile);
 	}
 	
+	/**
+	 * Update the target window.
+	 * 
+	 * @param pm
+	 */
 	public void setTarget(PersonalMessage pm){
 		this.pm = pm;
 	}

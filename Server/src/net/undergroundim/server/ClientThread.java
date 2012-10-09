@@ -41,6 +41,7 @@ public class ClientThread extends Thread {
     private String fromClient;
     private String[] header;
     private String[] packet;
+    private String[] clients;
     
     public boolean loggedin,connected, transfer;
     public Timer keyChangeTimer;
@@ -57,6 +58,7 @@ public class ClientThread extends Thread {
         this.socket = socket;
         try {
         	this.socket.setTcpNoDelay(true);
+        	this.socket.setKeepAlive(true);
         	this.socket.setSendBufferSize(30720);
         	this.socket.setReceiveBufferSize(30720);
 		} catch (SocketException e) {
@@ -114,6 +116,9 @@ public class ClientThread extends Thread {
 	                	 */
 	                	if(packet[1].equals(Constants.getPassword())){
 		                		if(Double.parseDouble(packet[2]) >= Constants.getMinVersionAllowed()){
+		                			if(Constants.getClient(packet[3]) != null) //Close other session
+		                				Constants.getClient(packet[3]).sendPacket(PacketHeaders.SESSION_CLOSED.getHeader() + "º");
+		                			
 		                			client = Constants.getJdbc().getUser(clientID, packet[3], packet[4]);
 		                			
 		                			if(client != null){
@@ -176,7 +181,7 @@ public class ClientThread extends Thread {
 	                			if(Constants.getJdbc().registerUser(packet[3],packet[4])){
 	                				sendPacket(PacketHeaders.REGISTER_USER.getHeader() + "º");
 	                			}else{
-	                				sendPacket(PacketHeaders.REGISTER_FAILED.getHeader() + "º" + "This user already exsists.");
+	                				sendPacket(PacketHeaders.REGISTER_FAILED.getHeader() + "º" + "This user already exists.");
 	                			}
 	                			socket.close();
 	                		}else{
@@ -200,6 +205,9 @@ public class ClientThread extends Thread {
 		                				client.getUsername() + "º" +
 		                				packet[1]);
 		                	}
+	                	}else{
+	                		sendPacket(PacketHeaders.FRIEND_ADD.getHeader() + "º" +
+	                				packet[1]);
 	                	}
 	                	break;
 	                case 10: //Friend Delete
@@ -211,7 +219,10 @@ public class ClientThread extends Thread {
 	                	}
 	                	break;
 	                case 11: //Friend Request
-	                	sendPacket(Packets.friendRequests(client.getUser_id()));
+	                	String p = Packets.friendRequests(client.getUser_id());
+	                	
+	                	if(p != null)
+	                		sendPacket(p);   
 	                	break;
 	                case 12: //Friend Disconnect
 	                	break;
@@ -227,12 +238,30 @@ public class ClientThread extends Thread {
 	                	}
 	                	break;
 	                case 14: //Personal Message
-	                	if(packet.length > 1)
-	                		Constants.getClient(Integer.parseInt(packet[2])).sendPacket(PacketHeaders.PERSONAL_MESSAGE.getHeader() + "º" +
-	                				packet[1] + "º" +
-	                				packet[3] + "º" + 
-	                				packet[4] + "º" +
-	                				packet[5]);
+	                	if(packet.length > 1){
+	                		if(Boolean.valueOf(packet[7])){
+	                			String[] clients = packet[3].split(",");
+	                			
+	                			for(String s : clients){
+	                				if(s != null)
+		                				Constants.getClient(Integer.parseInt(s)).sendPacket(PacketHeaders.PERSONAL_MESSAGE.getHeader() + "º" +
+				                				packet[1] + "º" +
+		                						packet[2] + "º" +
+				                				packet[4] + "º" +
+				                				packet[5] + "º" +
+				                				packet[6] + "º" +
+				                				packet[7]);
+	                			}
+	                		}else{
+		                		Constants.getClient(Integer.parseInt(packet[3])).sendPacket(PacketHeaders.PERSONAL_MESSAGE.getHeader() + "º" +
+		                				packet[1] + "º" +
+		                				packet[2] + "º" + 
+		                				packet[4] + "º" +
+		                				packet[5] + "º" +
+		                				packet[6] + "º" +
+		                				packet[7]);
+	                		}
+	                	}
 	                	break;
 	                case 15: //View Profile
 	                	sendPacket(Packets.viewProfile(client.getUser_id(), Integer.parseInt(packet[1])));
@@ -330,6 +359,35 @@ public class ClientThread extends Thread {
 	                			packet[2] + "º" +
 	                			packet[3]);
 	                	break;
+	                case 28: //Sessions error
+	                	break;
+	                case 29: //Group Add
+	                	clients = header[3].split(",");
+            			
+            			for(String s : clients){
+            				if(s != null)
+            					Constants.getClient(Integer.parseInt(s)).sendPacket(PacketHeaders.GROUP_ADD.getHeader() + "º" +
+		                				packet[1] + "º" + 
+            							packet[2] + "º" + 
+		                				packet[3] + "º" + 
+            							packet[4] + "ª" +
+		                				header[2]);
+            			}
+            			
+            			clients = null;
+	                	break;
+	                case 30:// Group remove
+	                	clients = packet[3].split(",");
+            			
+            			for(String s : clients){
+            				if(s != null)
+            					Constants.getClient(Integer.parseInt(s)).sendPacket(PacketHeaders.GROUP_REMOVE.getHeader() + "º" +
+		                				packet[1] + "º" + 
+            							packet[2]);
+            			}
+            				
+            			clients = null;
+	                	break;
 	                default: //Default should NEVER be reached.
 	                	if(!transfer){
 		                	sendPacket(PacketHeaders.PACKET_ERROR.getHeader() + "º" + fromClient);
@@ -358,15 +416,12 @@ public class ClientThread extends Thread {
 	                }
                 }else{
                 	//Null packet.
-                	/*if(!transfer){
-	                	sendPacket(PacketHeaders.PACKET_ERROR.getHeader() + "º" + fromClient);
-	            		socket.close();
-                	}*/
                 }
             }
         }catch(IOException e){
-            //log("DC client #: " + clientID + " | The user most likley closed the window.");
+            //Do nothing.
         }catch(Exception e2){
+        	e2.printStackTrace();
         	sendPacket(PacketHeaders.PACKET_ERROR.getHeader() + "º" + fromClient);
     		try {
 				socket.close();

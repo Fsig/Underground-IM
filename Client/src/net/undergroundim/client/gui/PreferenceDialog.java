@@ -1,5 +1,6 @@
 package net.undergroundim.client.gui;
 
+import java.awt.Color;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
@@ -173,6 +174,7 @@ public class PreferenceDialog extends JDialog implements ChangeListener, ActionL
 		FileWriter.writeToFile(Constants.getPrefFile().getAbsolutePath(), "Last Font Face;		" + Constants.getFontDialog().lastFontFace, true, true);
 		FileWriter.writeToFile(Constants.getPrefFile().getAbsolutePath(), "Last Font Size;		" + Constants.getFontDialog().lastFontSize, true, true);
 		FileWriter.writeToFile(Constants.getPrefFile().getAbsolutePath(), "Last Font Modifiers;	" + Constants.getFontDialog().lastFontModifiers, true, true);
+		FileWriter.writeToFile(Constants.getPrefFile().getAbsolutePath(), "Last Font Colour;	" + Constants.getFontDialog().colourPanel.getBackground().getRGB(), true, true);
 		update();
 		this.dispose();
 	}
@@ -244,6 +246,9 @@ public class PreferenceDialog extends JDialog implements ChangeListener, ActionL
 			 Constants.getFontDialog().lastFontFace = settings.get(14).split(";")[1].replaceAll("\t", "");
 			 Constants.getFontDialog().lastFontSize = Integer.parseInt(settings.get(15).split(";")[1].replaceAll("\t", ""));
 			 Constants.getFontDialog().lastFontModifiers = Integer.parseInt(settings.get(16).split(";")[1].replaceAll("\t", "")); 
+			 
+			 if(settings.size() > 17)
+				 Constants.getFontDialog().colourPanel.setBackground(new Color(Integer.parseInt(settings.get(17).split(";")[1].replaceAll("\t", "")))); 
 		}catch(Exception e){
 			e.printStackTrace();
 		}
@@ -277,13 +282,14 @@ public class PreferenceDialog extends JDialog implements ChangeListener, ActionL
 				FileWriter.writeToFile(Constants.getPrefFile().getAbsolutePath(), "24 Hour Time;		false" , true, true);
 				FileWriter.writeToFile(Constants.getPrefFile().getAbsolutePath(), "Log Location;		" + Constants.getUserHome() + "\\Logs", true, true);
 				FileWriter.writeToFile(Constants.getPrefFile().getAbsolutePath(), "Download Location;	" + Constants.getUserHome() + "\\Downloads", true, true);
-				FileWriter.writeToFile(Constants.getPrefFile().getAbsolutePath(), "Last Server;		", true, true);
+				FileWriter.writeToFile(Constants.getPrefFile().getAbsolutePath(), "Last Server;		64.94.101.216:5632", true, true);
 				FileWriter.writeToFile(Constants.getPrefFile().getAbsolutePath(), "Last Username;		", true, true);
 				FileWriter.writeToFile(Constants.getPrefFile().getAbsolutePath(), "Last Font Start;	", true, true);
 				FileWriter.writeToFile(Constants.getPrefFile().getAbsolutePath(), "Last Font End;		", true, true);
 				FileWriter.writeToFile(Constants.getPrefFile().getAbsolutePath(), "Last Font Face;		Dialog", true, true);
 				FileWriter.writeToFile(Constants.getPrefFile().getAbsolutePath(), "Last Font Size;		3", true, true);
 				FileWriter.writeToFile(Constants.getPrefFile().getAbsolutePath(), "Last Font Modifiers;	0", true, true);
+				FileWriter.writeToFile(Constants.getPrefFile().getAbsolutePath(), "Last Font Colour;	333333", true, true);
 			}
 		}catch(IOException e) {
 			e.printStackTrace();

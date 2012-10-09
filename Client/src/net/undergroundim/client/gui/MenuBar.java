@@ -195,8 +195,9 @@ public class MenuBar implements ActionListener{
 					"Version: " + Constants.getVersion() + "\n" +
 					"Build Date: " + Constants.getBuildDate() + "\n" +
 					"Created by: Fsig\n\n" +
-					"Website: \n" + 
-					"http://undergroundim.net/");
+					"Websites: \n" + 
+					"http://undergroundim.net\n" +
+					"http://ossietronics.com");
 		}
 		
 		else if(e.getSource() == mntmWebsite){

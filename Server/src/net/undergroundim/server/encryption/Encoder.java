@@ -11,17 +11,27 @@ import sun.misc.BASE64Encoder;
  *
  */
 public class Encoder {
+	private static BASE64Encoder b64e = new BASE64Encoder();
+	private static BASE64Decoder b64d = new BASE64Decoder();
 	
 	/**
 	 * Encode a packet to Base64.
-	 * 
-	 * Removes new line arguments, so we can have longer packets :)
 	 * 
 	 * @param packet
 	 * @return String
 	 */
 	public static String encode(String packet){
-		return new BASE64Encoder().encode(packet.getBytes()).replaceAll("\r\n", "");
+		return b64e.encode(packet.getBytes()).replaceAll("\r\n", "");
+	}
+	
+	/**
+	 * Encode a packet to Base64.
+	 * 
+	 * @param packet
+	 * @return byte[]
+	 */
+	public static String encode(byte[] packet){
+		return b64e.encode(packet).replaceAll("\r\n", "");
 	}
 	
 	/**
@@ -31,20 +41,29 @@ public class Encoder {
 	 * @return String
 	 */
 	public static String decode(String packet){
-		try {
-			return new String(new BASE64Decoder().decodeBuffer(packet));
-		} catch (IOException e) {
+		try{
+			return new String(b64d.decodeBuffer(packet));
+		}catch (IOException e) {
 			e.printStackTrace();
 		}
 		
 		return null;
 	}
 	
-	public static void main(String[] args){
-		String s = "Test test test one two three Test test test one two three Test test test one two three Test test test one two three Test test test one two three";
+	/**
+	 * Decode a string from Base64.
+	 * 
+	 * @param packet
+	 * @return byte[]
+	 */
+	public static byte[] decodeB(String packet){
+		try{
+			return b64d.decodeBuffer(packet);
+		}catch (IOException e) {
+			e.printStackTrace();
+		}
 		
-		System.out.println(encode(s).replace("\r\n", ""));
-		System.out.println(decode(encode(s).replace("\r\n", "")));
+		return null;
 	}
 
 }

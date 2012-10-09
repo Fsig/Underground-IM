@@ -11,13 +11,15 @@ public class Client {
 	private String screen_name;
 	private int status;
 	private boolean online;
+	private boolean playedSound;
 	
-	public Client(int user_id, String username, String screen_name, int status, boolean online){
+	public Client(int user_id, String username, String screen_name, int status, boolean online, boolean playedSound){
 		this.user_id = user_id;
 		this.username = username;
 		this.screen_name = screen_name;
 		this.status = status;
 		this.online = online;
+		this.playedSound = playedSound;
 	}
 
 	public int getUser_id() {
@@ -58,6 +60,14 @@ public class Client {
 
 	public void setOnline(boolean online) {
 		this.online = online;
+	}
+
+	public boolean isPlayedSound() {
+		return playedSound;
+	}
+
+	public void setPlayedSound(boolean playedSound) {
+		this.playedSound = playedSound;
 	}
 
 }

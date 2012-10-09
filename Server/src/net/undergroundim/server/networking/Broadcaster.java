@@ -45,7 +45,7 @@ public class Broadcaster {
 	public static void broadcastFriends(String packet, int user_id){
 		for(Client c : Constants.getJdbc().getFriends(user_id)){
 			for(ClientThread ct : Constants.getClients()){
-				if(ct.client.getUser_id() == c.getUser_id())
+				if(ct.client != null && ct.client.getUser_id() == c.getUser_id())
 					ct.sendPacket(packet);
 			}
 		}

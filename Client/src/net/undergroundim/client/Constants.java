@@ -18,6 +18,7 @@ import java.util.Date;
 import javax.swing.ImageIcon;
 
 import net.undergroundim.client.gui.Account;
+import net.undergroundim.client.gui.AddFriendDialog;
 import net.undergroundim.client.gui.EmoticonDialog;
 import net.undergroundim.client.gui.FontDialog;
 import net.undergroundim.client.gui.FriendList;
@@ -35,8 +36,8 @@ import net.undergroundim.client.networking.PacketManager;
  *
  */
 public class Constants {
-	private static double version = 1.009;
-	private static String buildDate = "27/Sep/2012";
+	private static double version = 1.011;
+	private static String buildDate = "09/Oct/2012";
 	
 	private static File userHome = new File(System.getProperty("user.home") + "\\Underground IM");
 	private static File prefFile = new File(System.getProperty("user.home") + "\\Underground IM\\preferences.ini");
@@ -45,7 +46,7 @@ public class Constants {
 	private static boolean saveLogFiles;
 	private static boolean trimChatLog;
 	private static boolean playSounds;
-	private static boolean showFileTransfer ;
+	private static boolean showFileTransfer;
 	private static boolean timeFormat;
 	private static boolean playNudges;
 	private static String logFileName = "";
@@ -69,6 +70,11 @@ public class Constants {
 	public static ImageIcon awayIcon = new ImageIcon(Constants.class.getResource("/icons/buddy_away.png"));
 	public static ImageIcon dndIcon = new ImageIcon(Constants.class.getResource("/icons/buddy_dnd.png"));
 	public static ImageIcon offlineIcon = new ImageIcon(Constants.class.getResource("/icons/buddy_offline.png"));
+	public static ImageIcon fontIcon2 = new ImageIcon(PersonalMessage.class.getResource("/icons/font.png"));
+	public static ImageIcon emoticonIcon = new ImageIcon(PersonalMessage.class.getResource("/icons/regular_smile.png"));
+	public static ImageIcon nudgeIcon = new ImageIcon(PersonalMessage.class.getResource("/icons/nudge.png"));
+	public static ImageIcon addIcon = new ImageIcon(PersonalMessage.class.getResource("/icons/buddy_add.png"));
+	public static ImageIcon transferIcon = new ImageIcon(PersonalMessage.class.getResource("/icons/Transfer.png"));
 	
 	private static Client user;
 	private static Profile userProfile;
@@ -82,6 +88,7 @@ public class Constants {
 	private static ProfileEdit profileEdit = new ProfileEdit();
 	private static Account account = new Account();
 	private static EmoticonDialog emoticonDialog = new EmoticonDialog();
+	private static AddFriendDialog addFriendDialog = new AddFriendDialog();
 	private static AudioPlayer audioPlayer = new AudioPlayer();
 	
 	private static ArrayList<Client> friends = new ArrayList<Client>();
@@ -417,6 +424,10 @@ public class Constants {
 		return emoticonDialog;
 	}
 
+	public static AddFriendDialog getAddFriendDialog() {
+		return addFriendDialog;
+	}
+
 	public static ArrayList<Client> getFriends() {
 		return friends;
 	}
@@ -553,22 +564,54 @@ public class Constants {
 		Constants.pmWindows = pmWindows;
 	}
 	
-	public static void addPmWindow(PersonalMessage pm){
+	public static void removePMWindow(PersonalMessage pm){
+		Constants.pmWindows.remove(pm);
+	}
+	
+	public static void addPmWindow(PersonalMessage pm, boolean group){
 		Constants.pmWindows.add(pm);
+		
+		if(group){
+			pm.groupChat = true;
+			pm.setGroupChat();
+			pm.updateClientList();
+		}
 	}
 	
 	public static PersonalMessage getPM(int user_id){
 		for(PersonalMessage pm : pmWindows)
-			if(pm.client.getUser_id() == user_id)
-				return pm;
+			if(!pm.groupChat)
+				if(pm.clients.get(0).getUser_id() == user_id)
+					return pm;
 		
 		return null;
 	}
 	
 	public static PersonalMessage getPM(String username){
 		for(PersonalMessage pm : pmWindows)
-			if(pm.client.getUsername().equals(username))
-				return pm;
+			if(!pm.groupChat)
+				if(pm.clients.get(0).getUsername().equals(username))
+					return pm;
+		
+		return null;
+	}
+	
+	public static PersonalMessage getPMGroup(int user_id){
+		for(PersonalMessage pm : pmWindows)
+			if(pm.groupChat)
+				for(Client client : pm.clients)
+					if(client.getUser_id() == user_id)
+						return pm;
+		
+		return null;
+	}
+	
+	public static PersonalMessage getPMGroup(String username){
+		for(PersonalMessage pm : pmWindows)
+			if(pm.groupChat)
+				for(Client client : pm.clients)
+					if(client.getUsername().equals(username))
+						return pm;
 		
 		return null;
 	}

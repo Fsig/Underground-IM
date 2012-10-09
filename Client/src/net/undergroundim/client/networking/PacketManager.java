@@ -37,7 +37,7 @@ public class PacketManager {
     private Socket socket;
     private String fromServer;
     private String[] header;
-    private String[] replyPacket;
+    private String[] packet;
     private boolean loggedin, connected, cancelled;
     private AESEncoder encoder;
     private SecretKeySpec key;
@@ -65,6 +65,7 @@ public class PacketManager {
 			
 			 try{
 				 this.socket.setTcpNoDelay(true);
+				 this.socket.setKeepAlive(true);
 				 this.socket.setSendBufferSize(20480);
 				 this.socket.setReceiveBufferSize(20480);
 			 }catch (SocketException e) {
@@ -151,7 +152,7 @@ public class PacketManager {
 					
 					//Get packet
 					if(header[1].contains("º"))
-						replyPacket = header[1].split("º");
+						packet = header[1].split("º");
 					
 					 /**
 			         * Switch through packet headers.
@@ -170,21 +171,22 @@ public class PacketManager {
 			        	 * disconnect the socket.
 			        	 */
 
-			        	Constants.setUser(new Client(Integer.parseInt(replyPacket[2]),
+			        	Constants.setUser(new Client(Integer.parseInt(packet[2]),
 			        			username,
-			        			replyPacket[3],
+			        			packet[3],
 			        			0,
+			        			true,
 			        			true));
 			        	Constants.setUserProfile(new Profile(username,
-			        			replyPacket[3],
-			        			replyPacket[4],
-			        			Byte.valueOf(replyPacket[5]),
-			        			Byte.valueOf(replyPacket[6]),
-			        			replyPacket[7],
-			        			replyPacket[8],
-			        			replyPacket[9]));
+			        			packet[3],
+			        			packet[4],
+			        			Byte.valueOf(packet[5]),
+			        			Byte.valueOf(packet[6]),
+			        			packet[7],
+			        			packet[8],
+			        			packet[9]));
 			        	
-				        this.key = new SecretKeySpec(Constants.stringToBytes(replyPacket[1]),"AES");
+				        this.key = new SecretKeySpec(Constants.stringToBytes(packet[1]),"AES");
 				        this.encoder = new AESEncoder(key);
 				        this.loggedin = true;
 				        
@@ -214,7 +216,7 @@ public class PacketManager {
 			        			"You have sent a packet that appears to be invaild,\n" +
 								"and you have been disconnect from the Server.\n\n" +
 								"Please report this error with the information below.\n\n" +
-								"Packet: " + replyPacket[1],
+								"Packet: " + packet[1],
 								"Packet Error From Client",
 								   JOptionPane.ERROR_MESSAGE);
 			        	
@@ -222,8 +224,8 @@ public class PacketManager {
 			        	Constants.getLoginGUI().setVisible(true);
 			        	break;
 			        case 4: //Key Change TIME!
-			        	if(Constants.bytesToString(this.key.getEncoded()).equals(replyPacket[1])){
-			        		this.key = new SecretKeySpec(Constants.stringToBytes(replyPacket[2]),"AES");
+			        	if(Constants.bytesToString(this.key.getEncoded()).equals(packet[1])){
+			        		this.key = new SecretKeySpec(Constants.stringToBytes(packet[2]),"AES");
 			        		this.encoder = new AESEncoder(key);
 			        	}else{
 			        		JOptionPane.showMessageDialog(null,
@@ -238,7 +240,7 @@ public class PacketManager {
 			        case 5: //Version error
 			        	JOptionPane.showMessageDialog(null,
 			        			"Your version is not compatible with the Server.\n\n" +
-			        			"Update to Version: " + replyPacket[0] + " or above to connect\n" +
+			        			"Update to Version: " + packet[0] + " or above to connect\n" +
 								"to this Server.",
 								"Version Error",
 								   JOptionPane.ERROR_MESSAGE);
@@ -254,18 +256,18 @@ public class PacketManager {
 			        case 7://Register fail
 			        	JOptionPane.showMessageDialog(null,
 							    "Failed to register user, see error below.\n\n" +
-								"Error: " + replyPacket[1],
+								"Error: " + packet[1],
 								"Registration Failed",
 							    JOptionPane.ERROR_MESSAGE);
 			        	disconnect();
 			        	break;
 			        case 8: //Get friend list
 			        	if(header.length > 2){
-				        	replyPacket = header[2].split(",");
+				        	packet = header[2].split(",");
 				        	
-				        	for(int i = 0; i < replyPacket.length; i++){
-				        		if(replyPacket[i].contains("º")){
-						        	String[] split = replyPacket[i].split("º");
+				        	for(int i = 0; i < packet.length; i++){
+				        		if(packet[i].contains("º")){
+						        	String[] split = packet[i].split("º");
 						        	
 						        	if(Integer.parseInt(split[0]) != Constants.getUser().getUser_id()){
 						        		if(Constants.getFriend(Integer.parseInt(split[0])) != null){ //If we found a client update them.
@@ -278,7 +280,8 @@ public class PacketManager {
 						        					split[1],
 						        					split[2],
 						        					Integer.parseInt(split[3]),
-						        					Boolean.parseBoolean(split[4])));
+						        					Boolean.parseBoolean(split[4]),
+						        					false));
 						        		}
 						        		
 						        		//If we get a message from this user or they come online again
@@ -287,17 +290,17 @@ public class PacketManager {
 						        	}
 				        		}
 				        	}
+				        	
+				        	Constants.getFriendList().updateFriends();
 			        	}
-			        	
-			        	Constants.getFriendList().updateFriends();
 			        	break;
 			        case 9: //Add friend
 			        	if(header.length > 2){
-				        	replyPacket = header[2].split(",");
+				        	packet = header[2].split(",");
 				        	
-				        	for(int i = 0; i < replyPacket.length; i++){
-				        		if(replyPacket[i].contains("º")){
-						        	String[] split = replyPacket[i].split("º");
+				        	for(int i = 0; i < packet.length; i++){
+				        		if(packet[i].contains("º")){
+						        	String[] split = packet[i].split("º");
 						        	
 						        	int response = JOptionPane.showConfirmDialog(null, 
 						        			split[0] + " would like to be your friend.\n" +
@@ -311,58 +314,89 @@ public class PacketManager {
 						        		sendPacket(PacketHeaders.REQUEST_RESPONSE.getHeader() + "º" + false + "º" + split[0] + "º" + split[1]);
 				        		}
 				        	}
+			        	}else if(packet.length > 1){
+			        		JOptionPane.showMessageDialog(null,
+									"The user " + packet[1] + " does not exist.\n" +
+									"Check that you have splet the name correctly.",
+									"Add Friend Error",
+									JOptionPane.ERROR_MESSAGE);
 			        	}
-			        	
 			        	break;
 			        case 10: //Delete friend
-			        	Constants.removeFriend(Integer.parseInt(replyPacket[1]));
+			        	Constants.removeFriend(Integer.parseInt(packet[1]));
 			        	Constants.getFriendList().updateFriends();
 			        	break;
 			        case 11: //Friend Request
 			        	break;
 			        case 12: //Disconnect friend
-			        	if(Constants.getFriend(Integer.parseInt(replyPacket[1])) != null)
-			        		Constants.getFriend(Integer.parseInt(replyPacket[1])).setOnline(false);
+			        	if(Constants.getFriend(Integer.parseInt(packet[1])) != null){
+			        		Constants.getFriend(Integer.parseInt(packet[1])).setOnline(false);
+			        		Constants.getFriend(Integer.parseInt(packet[1])).setPlayedSound(false);
+			        	}
 			        	
 			        	Constants.getFriendList().updateFriends();
 			        	
-			        	if(Constants.getPM(Integer.parseInt(replyPacket[1])) != null)
-			        		Constants.getPM(Integer.parseInt(replyPacket[1])).userDC(true);
+			        	if(Constants.getPM(Integer.parseInt(packet[1])) != null)
+			        		Constants.getPM(Integer.parseInt(packet[1])).userDC(true);
 			        	break;
 			        case 13: //Request Response
 			        	break;
-			        case 14: //Personal Message
-			        	if(Constants.getPM(Integer.parseInt(replyPacket[1])) == null){
-			        		Constants.addPmWindow(new PersonalMessage(Constants.getFriend(Integer.parseInt(replyPacket[1]))));
+			        case 14: //Personal Message		
+			        	if(!Boolean.valueOf(packet[6])){
+				        	if(Constants.getPM(Integer.parseInt(packet[1])) == null){
+				        		Constants.addPmWindow(new PersonalMessage(Constants.getFriend(Integer.parseInt(packet[1]))),false);
+				        	}
+				        	
+				        	//Set window visible if applicable
+				        	if(!Constants.getPM(Integer.parseInt(packet[1])).isVisible())
+				        		Constants.getPM(Integer.parseInt(packet[1])).setVisible(true);
+				        	
+				        	//Send message
+				        	Constants.getPM(Integer.parseInt(packet[1])).log(Constants.getFriend(Integer.parseInt(packet[1])).getScreen_name(), 
+			        				packet[3], 
+			        				packet[4],
+			        				packet[5]);
+				        	
+				        	//Show message and play sound if applicable
+			    			if(!Constants.getPM(Integer.parseInt(packet[1])).showing){
+			    				Constants.getPM(Integer.parseInt(packet[1])).setTitle("(New Message) - " + Constants.getPM(Integer.parseInt(packet[1])).baseTitle);
+			        			
+			        			if(Constants.isPlaySounds())
+			        				Constants.getAudioPlayer().play(AudioPlayer.MESSAGE);
+			        		}
+			        	}else{
+				        	if(Constants.getPMGroup(Integer.parseInt(packet[1])) == null){
+				        		Constants.addPmWindow(new PersonalMessage(Constants.getFriend(Integer.parseInt(packet[1]))),true);
+				        	}
+				        	
+					        //Set window visible if applicable
+					        if(!Constants.getPMGroup(Integer.parseInt(packet[1])).isVisible())
+					        	Constants.getPMGroup(Integer.parseInt(packet[1])).setVisible(true);
+					        	
+					        //Send message
+					        Constants.getPMGroup(Integer.parseInt(packet[1])).log(packet[2], 
+				        			packet[3], 
+				        			packet[4],
+				        			packet[5]);
+					        	
+					        //Show message and play sound if applicable
+				    		if(!Constants.getPMGroup(Integer.parseInt(packet[1])).showing){
+				    			Constants.getPMGroup(Integer.parseInt(packet[1])).setTitle("(New Message) - " + Constants.getPMGroup(Integer.parseInt(packet[1])).baseTitle);
+				        			
+				        		if(Constants.isPlaySounds())
+				        			Constants.getAudioPlayer().play(AudioPlayer.MESSAGE);
+				        	}
 			        	}
-			        	
-			        	//Set window visible if applicable
-			        	if(!Constants.getPM(Integer.parseInt(replyPacket[1])).isVisible())
-			        		Constants.getPM(Integer.parseInt(replyPacket[1])).setVisible(true);
-			        	
-			        	//Send message
-			        	Constants.getPM(Integer.parseInt(replyPacket[1])).log(Constants.getFriend(Integer.parseInt(replyPacket[1])).getScreen_name(), 
-		        				replyPacket[2], 
-		        				replyPacket[3],
-		        				replyPacket[4]);
-			        	
-			        	//Show message and play sound if applicable
-		    			if(!Constants.getPM(Integer.parseInt(replyPacket[1])).showing){
-		    				Constants.getPM(Integer.parseInt(replyPacket[1])).setTitle("(New Message) - " + Constants.getPM(Integer.parseInt(replyPacket[1])).baseTitle);
-		        			
-		        			if(Constants.isPlaySounds())
-		        				Constants.getAudioPlayer().play(AudioPlayer.MESSAGE);
-		        		}
 			        	break;
 			        case 15: //View Profile
-			        	Constants.getProfileView().setProfile(new Profile(replyPacket[1],
-			        			replyPacket[2],
-			        			replyPacket[3],
-			        			Byte.valueOf(replyPacket[4]),
-			        			Byte.valueOf(replyPacket[5]),
-			        			replyPacket[6],
-			        			replyPacket[7],
-			        			replyPacket[8]));
+			        	Constants.getProfileView().setProfile(new Profile(packet[1],
+			        			packet[2],
+			        			packet[3],
+			        			Byte.valueOf(packet[4]),
+			        			Byte.valueOf(packet[5]),
+			        			packet[6],
+			        			packet[7],
+			        			packet[8]));
 			        	
 			        	Constants.getProfileView().setVisible(true);
 			        	break;
@@ -378,95 +412,147 @@ public class PacketManager {
 			        	// TODO Nothing? Except maybe a TOK packet?
 			        	break;
 			        case 19: //File Transfer
-			        	if(Constants.getPM(Integer.parseInt(replyPacket[1])) == null){
-			        		Constants.addPmWindow(new PersonalMessage(Constants.getFriend(Integer.parseInt(replyPacket[1]))));
+			        	if(Constants.getPM(Integer.parseInt(packet[1])) == null){
+			        		Constants.addPmWindow(new PersonalMessage(Constants.getFriend(Integer.parseInt(packet[1]))),false);
 			        	}
 			        	
-			        	Constants.getPM(Integer.parseInt(replyPacket[1])).log("Server","Please accept or decline file transfer",null,null);
+			        	Constants.getPM(Integer.parseInt(packet[1])).log("Server","Please accept or decline file transfer",null,null);
 			        	
 			        	if(Constants.isPlaySounds())
 	        				Constants.getAudioPlayer().play(AudioPlayer.FILE);
 			        	
 			        	int response = JOptionPane.showConfirmDialog(null, 
-			        			Constants.getFriend(Integer.parseInt(replyPacket[1])).getUsername() + " would like to send you file(s).\n\n" +
+			        			Constants.getFriend(Integer.parseInt(packet[1])).getUsername() + " would like to send you file(s).\n\n" +
 			        					"File list:\n" +
-			        					replyPacket[3] +
+			        					packet[3] +
 			        					"\nWould you like to accept?", 
 			        			"File Transfer",
 			        			JOptionPane.YES_NO_OPTION);
 			        	
 			        	if(response == JOptionPane.YES_OPTION){
 			        		cancelled = false;
-			        		sendPacket(PacketHeaders.FILE_TRANSFER_RESPONSE.getHeader() + "º" + true + "º" + replyPacket[1] + "º" + replyPacket[2]);
+			        		sendPacket(PacketHeaders.FILE_TRANSFER_RESPONSE.getHeader() + "º" + true + "º" + packet[1] + "º" + packet[2]);
 			        	}else{
 			        		cancelled = true;
-			        		sendPacket(PacketHeaders.FILE_TRANSFER_RESPONSE.getHeader() + "º" + false + "º" + replyPacket[1] + "º" + replyPacket[2]);
+			        		sendPacket(PacketHeaders.FILE_TRANSFER_RESPONSE.getHeader() + "º" + false + "º" + packet[1] + "º" + packet[2]);
 			        	}
 			        	break;
 			        case 20: //File Transfer Response
-			        	if(Boolean.parseBoolean(replyPacket[3])){
-			        		if(Constants.getPM(Integer.parseInt(replyPacket[2])) == null){
-			        			Constants.addPmWindow(new PersonalMessage(Constants.getFriend(Integer.parseInt(replyPacket[2]))));
+			        	if(Boolean.parseBoolean(packet[3])){
+			        		if(Constants.getPM(Integer.parseInt(packet[2])) == null){
+			        			Constants.addPmWindow(new PersonalMessage(Constants.getFriend(Integer.parseInt(packet[2]))),false);
 				        	}
 
-			        		Constants.getPM(Integer.parseInt(replyPacket[2])).fileTransfer.sendFiles();
+			        		Constants.getPM(Integer.parseInt(packet[2])).fileTransfer.sendFiles();
 			        	}else{
 			        		JOptionPane.showMessageDialog(null,
-			        				Constants.getFriend(Integer.parseInt(replyPacket[2])).getUsername() + " has declined your file transfer.",
+			        				Constants.getFriend(Integer.parseInt(packet[2])).getUsername() + " has declined your file transfer.",
 									"File Transfer Response",
 									JOptionPane.INFORMATION_MESSAGE);
 			        		
-			        		Constants.getPM(Integer.parseInt(replyPacket[2])).fileTransfer.sendFile.setEnabled(true);
+			        		Constants.getPM(Integer.parseInt(packet[2])).fileTransfer.sendFile.setEnabled(true);
 			        	}
 			        	break;
 			        case 21: //File Start
 			        	if(!cancelled){
-				        	if(Constants.getPM(Integer.parseInt(replyPacket[1])) == null){
-			        			Constants.addPmWindow(new PersonalMessage(Constants.getFriend(Integer.parseInt(replyPacket[1]))));
+				        	if(Constants.getPM(Integer.parseInt(packet[1])) == null){
+			        			Constants.addPmWindow(new PersonalMessage(Constants.getFriend(Integer.parseInt(packet[1]))),false);
 				        	}
 				        	
 				        	if(Constants.isShowFileTransfer())
-				        		Constants.getPM(Integer.parseInt(replyPacket[1])).fileTransfer.setVisible(true);
+				        		Constants.getPM(Integer.parseInt(packet[1])).fileTransfer.setVisible(true);
 				        	
-			        		Constants.getPM(Integer.parseInt(replyPacket[1])).fileTransfer.fileStart(replyPacket[3], Long.valueOf(replyPacket[4]));
+			        		Constants.getPM(Integer.parseInt(packet[1])).fileTransfer.fileStart(packet[3], Long.valueOf(packet[4]));
 			        	}
 			        	break;
 			        case 22: //File Send
 			        	if(!cancelled)
-			        		Constants.getPM(Integer.parseInt(replyPacket[1])).fileTransfer.fileSend(replyPacket[3]);
+			        		Constants.getPM(Integer.parseInt(packet[1])).fileTransfer.fileSend(packet[3]);
 			        	break;
 			        case 23: //File End
 			        	if(!cancelled)
-			        		Constants.getPM(Integer.parseInt(replyPacket[1])).fileTransfer.fileEnd();
+			        		Constants.getPM(Integer.parseInt(packet[1])).fileTransfer.fileEnd();
 			        	break;
 			        case 24: //File Cancel
 			        	if(!cancelled){
 				        	cancelled = true;
-				        	Constants.getPM(Integer.parseInt(replyPacket[1])).fileTransfer.fileCancel();
+				        	Constants.getPM(Integer.parseInt(packet[1])).fileTransfer.fileCancel();
 			        	}
 			        	break;
 			        case 25: //Server Permissions
 			        	JOptionPane.showMessageDialog(null,
 								"You have tried to do a action that is not allowed by the server,\n" +
 								"Please read the response from the server below.\n\n" +
-								"Response: " + replyPacket[1],
+								"Response: " + packet[1],
 								"Server Permission Violation",
 								JOptionPane.ERROR_MESSAGE);
 			        	break;
 			        case 26: //Nudge
-			        	if(Constants.getPM(Integer.parseInt(replyPacket[1])) == null){
-		        			Constants.addPmWindow(new PersonalMessage(Constants.getFriend(Integer.parseInt(replyPacket[1]))));
+			        	if(Constants.getPM(Integer.parseInt(packet[1])) == null){
+		        			Constants.addPmWindow(new PersonalMessage(Constants.getFriend(Integer.parseInt(packet[1]))),false);
 			        	}
 			        	
-			        	Constants.getPM(Integer.parseInt(replyPacket[1])).setVisible(true);
-			        	Constants.getPM(Integer.parseInt(replyPacket[1])).receiveNudge();
+			        	Constants.getPM(Integer.parseInt(packet[1])).setVisible(true);
+			        	Constants.getPM(Integer.parseInt(packet[1])).receiveNudge();
 			        	break;
 			        case 27: //User typing
-			        	if(Constants.getPM(Integer.parseInt(replyPacket[1])) == null){
-		        			Constants.addPmWindow(new PersonalMessage(Constants.getFriend(Integer.parseInt(replyPacket[1]))));
+			        	if(Constants.getPM(Integer.parseInt(packet[1])) == null){
+		        			Constants.addPmWindow(new PersonalMessage(Constants.getFriend(Integer.parseInt(packet[1]))),false);
 			        	}
 			        	
-			        	Constants.getPM(Integer.parseInt(replyPacket[1])).updateStatus(Boolean.valueOf(replyPacket[3]));
+			        	Constants.getPM(Integer.parseInt(packet[1])).updateStatus(Boolean.valueOf(packet[3]));
+			        	break;
+			        case 28: //Session Closed
+			        	disconnect();
+						
+			        	JOptionPane.showMessageDialog(null,
+								"You have been disconnect because another session has been opened.",
+								"Session Error",
+								JOptionPane.ERROR_MESSAGE);
+			        	break;
+			        case 29: //Group Add
+			        	String[] clients = header[2].split(",");
+			        	String[] details;
+			        	
+			        	if(Constants.getPMGroup(Integer.valueOf(packet[1])) == null){
+			        		Constants.addPmWindow(new PersonalMessage(new Client(Integer.valueOf(packet[1]),
+			        				packet[2],
+			        				packet[3],
+			        				Integer.valueOf(packet[4]),
+			        				true,
+			        				true)),
+			        				true);
+			        	}
+            			
+            			for(String s : clients){
+            				if(s != null){
+            					details = s.split("º");
+            					if(Integer.valueOf(details[0]) != Constants.getUser().getUser_id()){
+            						if(Constants.getPM(Integer.valueOf(packet[1])) != null){
+    	            					Constants.getPM(Integer.valueOf(packet[1])).addClient(new Client(Integer.valueOf(details[0]),
+    	            							details[1],
+    	            							details[2],
+    	            							Integer.valueOf(details[3]),
+    	            							true, 
+    	            							true));
+        			        		}else{
+		            					Constants.getPMGroup(Integer.valueOf(packet[1])).addClient(new Client(Integer.valueOf(details[0]),
+		            							details[1],
+		            							details[2],
+		            							Integer.valueOf(details[3]),
+		            							true, 
+		            							true));
+        			        		}
+            					}
+            				}
+            			}
+            			
+            			if(!Constants.getPMGroup(Integer.valueOf(packet[1])).isVisible())
+			        		Constants.getPMGroup(Integer.valueOf(packet[1])).setVisible(true);
+			        	break;
+			        case 30: //Remove person from group
+			        	Constants.getPMGroup(Integer.valueOf(packet[1])).log("Server",packet[2] + " has left the chat.",null,null);
+			        	Constants.getPMGroup(Integer.valueOf(packet[1])).removeClient(Integer.valueOf(packet[1]));
 			        	break;
 			        default:
 			        	break;
@@ -517,6 +603,14 @@ public class PacketManager {
 	 */
 	public void disconnect(){
 		try{	
+			for(PersonalMessage pm : Constants.getPmWindows())
+				pm.dispose();
+			
+			if(Constants.getFriendList() != null && Constants.getFriendList().isVisible())
+				Constants.getFriendList().dispose();
+			
+			Constants.getLoginGUI().setVisible(true);
+			
 			connected = false;
 			out.close();
 			in.close();

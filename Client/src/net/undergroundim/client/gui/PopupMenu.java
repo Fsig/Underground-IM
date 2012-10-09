@@ -9,7 +9,6 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 
 import javax.swing.ImageIcon;
-import javax.swing.JList;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
@@ -27,22 +26,20 @@ import net.undergroundim.client.networking.PacketHeaders;
  *
  */
 public class PopupMenu implements ActionListener, MouseListener {
-	private JPopupMenu chatroom_clientMenu = new JPopupMenu();
+	private JPopupMenu chatLogMenu = new JPopupMenu();
 	private JPopupMenu editMenu = new JPopupMenu();
 	private JPopupMenu friendMenu = new JPopupMenu();
 	private java.awt.PopupMenu trayMenu = new java.awt.PopupMenu();
 	
-	private JMenuItem pmMenu = new JMenuItem("Message");
-	private JMenuItem blockMenu = new JMenuItem("Block");
 	private JMenuItem cutMenu = new JMenuItem("Cut");
 	private JMenuItem copyMenu = new JMenuItem("Copy");
+	private JMenuItem copyMenu2 = new JMenuItem("Copy");
 	private JMenuItem pasteMenu = new JMenuItem("Paste");
 	private JMenuItem deleteMenu = new JMenuItem("Delete");
 	private JMenuItem deleteMenu2 = new JMenuItem("Delete");
 	private JMenuItem selectMenu = new JMenuItem("Select All");
 	private JMenuItem imageMenu = new JMenuItem("Insert IMG");
 	private JMenuItem fileTransferMenu = new JMenuItem("File Transfer");
-	private JMenuItem fileTransferMenu2 = new JMenuItem("File Transfer");
 	private JMenuItem messageMenu = new JMenuItem("Message");
 	private JMenuItem profileMenu = new JMenuItem("Profile");
 	
@@ -67,7 +64,6 @@ public class PopupMenu implements ActionListener, MouseListener {
 	private ImageIcon fileTransferIcon = new ImageIcon(PopupMenu.class.getResource("/icons/Transfer-Document-icon.png"));
 	
 	private PersonalMessage pm;
-	private JList<String> clientList;
 	private JTable friendList;
 	
 	/**
@@ -76,24 +72,9 @@ public class PopupMenu implements ActionListener, MouseListener {
 	 * @param chatPane
 	 * @param clientList
 	 */
-	public PopupMenu(PersonalMessage pm, JList<String> clientList, JTable friendList){
+	public PopupMenu(PersonalMessage pm, JTable friendList){
 		this.pm = pm;
-		this.clientList = clientList;
 		this.friendList = friendList;
-		
-		//Chat Room Client Menu
-		if(clientList != null){
-			blockMenu.setIcon(blockIcon);
-			pmMenu.setIcon(pmIcon);
-	
-			chatroom_clientMenu.add(blockMenu);
-			chatroom_clientMenu.add(pmMenu);
-			
-			blockMenu.addActionListener(this);
-			pmMenu.addActionListener(this);
-			
-			clientList.addMouseListener(this);
-		}
 		
 		//Edit Menu
 		if(pm != null){
@@ -103,7 +84,6 @@ public class PopupMenu implements ActionListener, MouseListener {
 			pasteMenu.setIcon(pasteIcon);
 			deleteMenu.setIcon(deleteIcon);
 			selectMenu.setIcon(selectIcon);
-			fileTransferMenu.setIcon(fileTransferIcon);
 	
 			editMenu.add(cutMenu);
 			editMenu.add(copyMenu);
@@ -113,7 +93,6 @@ public class PopupMenu implements ActionListener, MouseListener {
 			editMenu.add(selectMenu);
 			editMenu.addSeparator();
 			editMenu.add(imageMenu);
-			editMenu.add(fileTransferMenu);
 	
 			imageMenu.addActionListener(this);
 			cutMenu.addActionListener(this);
@@ -121,27 +100,35 @@ public class PopupMenu implements ActionListener, MouseListener {
 			pasteMenu.addActionListener(this);
 			deleteMenu.addActionListener(this);
 			selectMenu.addActionListener(this);
-			fileTransferMenu.addActionListener(this);
 			
 			pm.chatBox.addMouseListener(this);
+			
+			//Chat log
+			copyMenu2.setIcon(copyIcon);
+			chatLogMenu.add(copyMenu2);
+			copyMenu2.addActionListener(this);
+			pm.log.addMouseListener(this);
+			
+			//Client list
+			
 		}
 		
 		//Friend Menu
 		if(friendList != null){
 			messageMenu.setIcon(pmIcon);
 			profileMenu.setIcon(Constants.profileIcon);
-			fileTransferMenu2.setIcon(fileTransferIcon);
+			fileTransferMenu.setIcon(fileTransferIcon);
 			deleteMenu2.setIcon(blockIcon);
 	
 			friendMenu.add(messageMenu);
 			friendMenu.add(profileMenu);
-			friendMenu.add(fileTransferMenu2);
+			friendMenu.add(fileTransferMenu);
 			friendMenu.addSeparator();
 			friendMenu.add(deleteMenu2);
 			
 			messageMenu.addActionListener(this);
 			profileMenu.addActionListener(this);
-			fileTransferMenu2.addActionListener(this);
+			fileTransferMenu.addActionListener(this);
 			deleteMenu2.addActionListener(this);
 			
 			friendList.addMouseListener(this);
@@ -171,20 +158,7 @@ public class PopupMenu implements ActionListener, MouseListener {
 
 	@Override
 	public void actionPerformed(ActionEvent e) {
-		if(e.getSource() == blockMenu){
-			if(blockMenu.getText() == "Block"){
-				//Constants.getClient(clientList.getSelectedValue()).setBlocked(true);
-			}else{
-				//Constants.getClient(clientList.getSelectedValue()).setBlocked(false);
-			}
-		}
-		
-		else if(e.getSource() == pmMenu){
-			pm.chatBox.setText(pm.chatBox.getText() + "/w " + clientList.getSelectedValue() + " ");
-			pm.chatBox.requestFocus();
-		}
-		
-		else if(e.getSource() == cutMenu){
+		if(e.getSource() == cutMenu){
 			if(pm.chatBox.getSelectedText() != null){
 				String cutText = pm.chatBox.getSelectedText();
 				Clipboard.setClipboardContents(cutText);
@@ -195,6 +169,12 @@ public class PopupMenu implements ActionListener, MouseListener {
 		else if(e.getSource() == copyMenu){
 			if(pm.chatBox.getSelectedText() != null){
 				Clipboard.setClipboardContents(pm.chatBox.getSelectedText());
+			}
+		}
+		
+		else if(e.getSource() == copyMenu2){
+			if(pm.log.getSelectedText() != null){
+				Clipboard.setClipboardContents(pm.log.getSelectedText());
 			}
 		}
 		
@@ -224,7 +204,7 @@ public class PopupMenu implements ActionListener, MouseListener {
 			
 			if(Constants.getFriend(friendList.getValueAt(row, 1).toString()).isOnline()){
 				if(Constants.getPM(friendList.getValueAt(row, 1).toString()) == null)
-					Constants.addPmWindow(new PersonalMessage(Constants.getFriend(friendList.getValueAt(row, 1).toString())));
+					Constants.addPmWindow(new PersonalMessage(Constants.getFriend(friendList.getValueAt(row, 1).toString())),false);
 
 				Constants.getPM(Constants.getFriend(friendList.getValueAt(row, 1).toString()).getUser_id()).setVisible(true);
 			}
@@ -253,15 +233,11 @@ public class PopupMenu implements ActionListener, MouseListener {
 		}
 		
 		else if(e.getSource() == fileTransferMenu){
-			pm.fileTransfer.setVisible(true);
-		}
-		
-		else if(e.getSource() == fileTransferMenu2){
 			int row = friendList.getSelectedRow();
 			
 			if(Constants.getFriend(friendList.getValueAt(row, 1).toString()).isOnline()){
 				if(Constants.getPM(friendList.getValueAt(row, 1).toString()) == null)
-					Constants.addPmWindow(new PersonalMessage(Constants.getFriend(friendList.getValueAt(row, 1).toString())));
+					Constants.addPmWindow(new PersonalMessage(Constants.getFriend(friendList.getValueAt(row, 1).toString())),false);
 			
 				Constants.getPM(Constants.getFriend(friendList.getValueAt(row, 1).toString()).getUser_id()).fileTransfer.setVisible(true);
 			}
@@ -319,15 +295,12 @@ public class PopupMenu implements ActionListener, MouseListener {
 	
 	@Override
 	public void mouseReleased(MouseEvent e) {
-		if(e.getSource() == clientList && e.isPopupTrigger()){
-			clientList.setSelectedIndex(getRow(e.getPoint()));
-			blockMenu.setIcon(blockIcon);
-			blockMenu.setText("Block");
-			chatroom_clientMenu.show(e.getComponent(), e.getX(), e.getY());
+		if(pm != null && e.getSource() == pm.chatBox && e.isPopupTrigger()){
+			editMenu.show(e.getComponent(), e.getX(), e.getY());
 		}
 		
-		else if(pm != null && e.getSource() == pm.chatBox && e.isPopupTrigger()){
-			editMenu.show(e.getComponent(), e.getX(), e.getY());
+		else if(pm != null && e.getSource() == pm.log && e.isPopupTrigger()){
+			chatLogMenu.show(e.getComponent(), e.getX(), e.getY());
 		}
 		
 		else if(e.getSource() == friendList && e.isPopupTrigger()){
@@ -347,7 +320,7 @@ public class PopupMenu implements ActionListener, MouseListener {
 			
 			if(Constants.getFriend(friendList.getValueAt(row, 1).toString()).isOnline()){
 				if(Constants.getPM(friendList.getValueAt(row, 1).toString()) == null)
-					Constants.addPmWindow(new PersonalMessage(Constants.getFriend(friendList.getValueAt(row, 1).toString())));
+					Constants.addPmWindow(new PersonalMessage(Constants.getFriend(friendList.getValueAt(row, 1).toString())),false);
 				
 				Constants.getPM(Constants.getFriend(friendList.getValueAt(row, 1).toString()).getUser_id()).setVisible(true);
 			}
@@ -362,20 +335,6 @@ public class PopupMenu implements ActionListener, MouseListener {
 	 */
 	private int getFriendRow(Point point){
 		return friendList.rowAtPoint(point);
-	}
-	
-	/**
-	 * Get the row at the point.
-	 * 
-	 * @param point
-	 * @return Integer
-	 */
-	private int getRow(Point point){
-		return clientList.locationToIndex(point);
-	}
-	
-	public JPopupMenu getChatRoomClientMenu(){
-		return chatroom_clientMenu;
 	}
 
 	public JPopupMenu getEditMenu() {

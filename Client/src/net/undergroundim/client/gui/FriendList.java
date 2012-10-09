@@ -61,14 +61,14 @@ public class FriendList extends JFrame{
 		friendList.getColumnModel().getColumn(0).setCellRenderer(new ImageRenderer());
 		
 		friendListContainer = new JScrollPane(friendList,
-				JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
+				JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
 				JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
 		friendListContainer.setBounds(0, 0, getWidth() -15, getHeight() -90);
 		
 		//Add components
 		this.add(friendListContainer);
 		
-		popupMenu = new PopupMenu(null,null,friendList);
+		popupMenu = new PopupMenu(null,friendList);
 		
 		TrayIcon trayIcon = null;
 		if(SystemTray.isSupported()) {
@@ -111,7 +111,10 @@ public class FriendList extends JFrame{
 			if(c.isOnline()){
 				switch(c.getStatus()){
 				case 0:
-        			online = true;
+					if(!c.isPlayedSound()){
+						online = true;
+						c.setPlayedSound(true);
+					}
 					friendListData.addRow(new Object[]{Constants.onlineIcon,c.getUsername()});
 					break;
 				case 1:

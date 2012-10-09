@@ -27,15 +27,18 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowFocusListener;
+import java.awt.event.WindowListener;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
@@ -64,20 +67,24 @@ import net.undergroundim.client.networking.PacketHeaders;
  *
  */
 public class PersonalMessage extends JFrame implements ComponentListener, KeyListener, FocusListener, HyperlinkListener,  WindowFocusListener, 
-	DropTargetListener, DragSourceListener, DragGestureListener, ActionListener {
+	DropTargetListener, DragSourceListener, DragGestureListener, ActionListener, WindowListener {
 	private static final long serialVersionUID = -7212578453796141050L;
 	
-	public Client client;
+	public ArrayList<Client> clients = new ArrayList<Client>();
+	private Vector<String> clientsList = new Vector<String>();
 	public FileTransfer fileTransfer;
 	public String baseTitle;
 	public JTextPane log = new JTextPane();
 	public JTextArea chatBox = new JTextArea();
+	public JList<String> clientList = new JList<String>();
 	private JScrollPane logContainer;
 	private JScrollPane chatBoxContainer;
+	private JScrollPane clientContainer;
 	
 	private JButton fontButton = new JButton();
 	private JButton emoticonButton = new JButton();
 	private JButton nudgeButton = new JButton();
+	private JButton addButton = new JButton();
 	private JButton transferButton = new JButton();
 	
 	private JLabel statusLabel = new JLabel(); 
@@ -88,6 +95,7 @@ public class PersonalMessage extends JFrame implements ComponentListener, KeyLis
     
 	private boolean shiftDown = false;
 	public boolean showing = true;
+	public boolean groupChat = false;
 	
 	private String URL_PATTERN = "\\b(https?|ftp|file)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]";
 	private String URL_PATTERN_2 = "([^\"|\\'])\\b(https?|ftp|file)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]";
@@ -100,18 +108,15 @@ public class PersonalMessage extends JFrame implements ComponentListener, KeyLis
 	private DropTarget dropTarget = new DropTarget (this, this);
     private DragSource dragSource = DragSource.getDefaultDragSource();
     
-    private ImageIcon fontIcon = new ImageIcon(MenuBar.class.getResource("/icons/font.png"));
-    private ImageIcon emoticonIcon = new ImageIcon(MenuBar.class.getResource("/icons/regular_smile.png"));
-    private ImageIcon nudgeIcon = new ImageIcon(MenuBar.class.getResource("/icons/nudge.png"));
-    private ImageIcon transferIcon = new ImageIcon(MenuBar.class.getResource("/icons/Transfer.png"));
-    
     private Timer nudgeTimer = new Timer(10000);
+    
+    private String clientSend;
 
 	/**
 	 * Construct a new PM window.
 	 */
 	public PersonalMessage(Client client){
-		this.client = client;
+		this.clients.add(client);
 		this.setIconImage(Constants.mailIcon);
 		baseTitle = client.getScreen_name() + " | " + client.getUsername();
 		this.setTitle(baseTitle + " - PM");
@@ -127,6 +132,7 @@ public class PersonalMessage extends JFrame implements ComponentListener, KeyLis
 		this.addComponentListener(this);
 		this.addFocusListener(this);
 		this.addWindowFocusListener(this);
+		this.addWindowListener(this);
 		
 		//Logs
 		log.setBounds(0, 0, 585, 300);
@@ -141,7 +147,7 @@ public class PersonalMessage extends JFrame implements ComponentListener, KeyLis
 		log.setAutoscrolls(false);
 
 		logContainer = new JScrollPane(log,
-				JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
+				JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
 				JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
 		logContainer.setBounds(0, 0, 585, 300);
 		logContainer.setAutoscrolls(false);
@@ -160,36 +166,50 @@ public class PersonalMessage extends JFrame implements ComponentListener, KeyLis
 		dragSource.createDefaultDragGestureRecognizer(this, DnDConstants.ACTION_COPY, this);
 		
 		chatBoxContainer = new JScrollPane(chatBox,
-				JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
+				JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
 				JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 		chatBoxContainer.setBounds(0, 300, 450, 90);
 
 		//Buttons
 		fontButton.setBounds(0, 279, 50, 20);
-		fontButton.setIcon(fontIcon);
+		fontButton.setIcon(Constants.fontIcon2);
 		
 		emoticonButton.setBounds(51, 279, 25, 20);
-		emoticonButton.setIcon(emoticonIcon);
+		emoticonButton.setIcon(Constants.emoticonIcon);
 		
 		nudgeButton.setBounds(77, 279, 30, 20);
-		nudgeButton.setIcon(nudgeIcon);
+		nudgeButton.setIcon(Constants.nudgeIcon);
+		
+		addButton.setBounds(getWidth() -57, 279, 20, 20);
+		addButton.setIcon(Constants.addIcon);
+		addButton.setToolTipText("Add Buddy to conversation");
 		
 		transferButton.setBounds(getWidth() -36, 279, 20, 20);
-		transferButton.setIcon(transferIcon);
+		transferButton.setIcon(Constants.transferIcon);
+		transferButton.setToolTipText("File Transfer");
 		
 		fontButton.addActionListener(this);
 		emoticonButton.addActionListener(this);
 		nudgeButton.addActionListener(this);
+		addButton.addActionListener(this);
 		transferButton.addActionListener(this);
 		
 		//Status label
 		statusLabel.setBounds(115, 279, 200, 20);
+		
+		//Client list
+		clientList.setBounds(450, 0, 135, getHeight() - 60);
+		clientContainer = new JScrollPane(clientList,
+				JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+				JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+		clientContainer.setBounds(450, 0, 135, getHeight() - 60);
 		
 		this.add(logContainer);
 		this.add(chatBoxContainer);
 		this.add(fontButton);
 		this.add(emoticonButton);
 		this.add(nudgeButton);
+		this.add(addButton);
 		this.add(transferButton);
 		this.add(statusLabel);
 		
@@ -203,8 +223,8 @@ public class PersonalMessage extends JFrame implements ComponentListener, KeyLis
 		
 		chatBox.setForeground(Constants.getFontDialog().colourPanel.getBackground());
 		
-		popupMenu = new PopupMenu(this,null,null);
-		fileTransfer = new FileTransfer(this.client);
+		popupMenu = new PopupMenu(this,null);
+		fileTransfer = new FileTransfer(clients.get(0));
 	}
 	
 	/**
@@ -215,7 +235,7 @@ public class PersonalMessage extends JFrame implements ComponentListener, KeyLis
 	 */
 	public void log(String username, String msg, String string, String stringEnd){	
 		//If the font is null, set it to the default.
-		if(string == null | stringEnd == null){
+		if(string == null || stringEnd == null){
 			string = "<font face='Dialog' size='3' color='gray'>";
 			stringEnd = "</font>";
 		}else if(!Constants.isFontEnabled()){
@@ -289,14 +309,31 @@ public class PersonalMessage extends JFrame implements ComponentListener, KeyLis
 					Constants.getFontDialog().getFontString(),
 					Constants.getFontDialog().getFontStringEnd());
 				
+			clientSend = "";
+			for(Client client : clients){
+				if(clients.size() > 1)
+					clientSend += client.getUser_id() + ",";
+				else
+					clientSend += client.getUser_id();
+			}
+			
 			Constants.getPacketManager().sendPacket(PacketHeaders.PERSONAL_MESSAGE.getHeader() + "º" + 
 					Constants.getUser().getUser_id() + "º" +
-					client.getUser_id() + "º" +
+					Constants.getUser().getScreen_name() + "º" +
+					clientSend + "º" +
 					text.replaceAll("ª|º|¢", "") + "º" +
 					Constants.getFontDialog().getFontString() + "º" +
-					Constants.getFontDialog().getFontStringEnd());
+					Constants.getFontDialog().getFontStringEnd() + "º" +
+					groupChat);
+			
 			
 			chatBox.setText("");
+			
+			if(clients.size() < 2)
+			Constants.getPacketManager().sendPacket(PacketHeaders.USER_WRITING.getHeader() + "º" +
+					Constants.getUser().getUser_id() + "º" +
+					clients.get(0).getUser_id() + "º" +
+					false);
 		}
 		
 		chatBox.setEnabled(true);
@@ -320,6 +357,7 @@ public class PersonalMessage extends JFrame implements ComponentListener, KeyLis
 			transferButton.setEnabled(false);
 			fileTransfer.pickFile.setEnabled(false);
 			fileTransfer.sendFile.setEnabled(false);
+			addButton.setEnabled(false);
 			chatBox.setText("User is offline.");
 			updateStatus(false);
 		}else{
@@ -331,6 +369,7 @@ public class PersonalMessage extends JFrame implements ComponentListener, KeyLis
 			transferButton.setEnabled(true);
 			fileTransfer.pickFile.setEnabled(true);
 			fileTransfer.sendFile.setEnabled(true);
+			addButton.setEnabled(true);
 			chatBox.setText("");
 		}
 	}
@@ -387,39 +426,47 @@ public class PersonalMessage extends JFrame implements ComponentListener, KeyLis
 	
 	@Override
 	public void keyTyped(KeyEvent e) {
-		if(!chatBox.getText().isEmpty() && !typing){
+		if(!chatBox.getText().isEmpty() && !typing && clients.size() < 2){
 			typing = true;
 			
 			Constants.getPacketManager().sendPacket(PacketHeaders.USER_WRITING.getHeader() + "º" +
 					Constants.getUser().getUser_id() + "º" +
-					client.getUser_id() + "º" +
+					clients.get(0).getUser_id() + "º" +
 					true);
-		}else if(chatBox.getText().isEmpty() && typing){
+		}else if(chatBox.getText().isEmpty() && typing && clients.size() < 2){
 			typing = false;
 			
 			Constants.getPacketManager().sendPacket(PacketHeaders.USER_WRITING.getHeader() + "º" +
 					Constants.getUser().getUser_id() + "º" +
-					client.getUser_id() + "º" +
+					clients.get(0).getUser_id() + "º" +
 					false);
 		}
 	}
 
 	@Override
 	public void componentResized(ComponentEvent e) {
-		log.setSize(getWidth() -15, getHeight() -171);
-		logContainer.setSize(getWidth() -15, getHeight() -171);
-		
+		if(!groupChat){
+			log.setSize(getWidth() -15, getHeight() -171);
+			logContainer.setSize(getWidth() -15, getHeight() -171);
+		}else{
+			log.setSize(getWidth() -150, getHeight() -171);
+			logContainer.setSize(getWidth() -150, getHeight() -171);
+			
+			clientContainer.setBounds(getWidth() -150, 0, 135, getHeight() - 171);
+		}
+			
 		chatBox.setSize(getWidth() -15, chatBox.getHeight());
 		chatBoxContainer.setBounds(0, logContainer.getHeight() +21, getWidth() -15, chatBoxContainer.getHeight());
-		
+			
 		fontButton.setBounds(0, getHeight() -171, 50, 20);
 		emoticonButton.setBounds(51, getHeight() -171, 25, 20);
 		nudgeButton.setBounds(77, getHeight() -171, 30, 20);
+		addButton.setBounds(getWidth() -57, getHeight() -171, 20, 20);
 		transferButton.setBounds(getWidth() -36, getHeight() -171, 20, 20);
 		statusLabel.setBounds(115, getHeight() -171, statusLabel.getWidth(), statusLabel.getHeight());
-		
+			
 		repaint();
-		
+			
 		log.setCaretPosition(doc.getLength());
 	}
 
@@ -473,13 +520,13 @@ public class PersonalMessage extends JFrame implements ComponentListener, KeyLis
 			Constants.getEmoticonDialog().setVisible(true);
 		}
 		
-		else if(e.getSource() == nudgeButton){
+		else if(e.getSource() == nudgeButton && clients.size() < 2){
 			if(nudgeTimer.isUp()){
 				log("Server","You just sent a Nudge!",null,null);
 				
 				Constants.getPacketManager().sendPacket(PacketHeaders.NUDGE.getHeader() + "º" +
 						Constants.getUser().getUser_id() + "º" +
-						client.getUser_id());
+						clients.get(0).getUser_id());
 				
 				nudgeTimer.reset();
 				
@@ -488,6 +535,12 @@ public class PersonalMessage extends JFrame implements ComponentListener, KeyLis
 			}else{
 				log("Server","You can only send one nudge every 10 seconds!",null,null);
 			}
+		}
+		
+		else if(e.getSource() == addButton){
+			Constants.getAddFriendDialog().setTarget(this);
+			Constants.getAddFriendDialog().updateFriends();
+			Constants.getAddFriendDialog().setVisible(true);
 		}
 		
 		else if(e.getSource() == transferButton){
@@ -499,7 +552,7 @@ public class PersonalMessage extends JFrame implements ComponentListener, KeyLis
 	 * Receive a nudge
 	 */
 	public void receiveNudge(){
-		log("Server", client.getScreen_name() + " sent you a Nudge!",null,null);
+		log("Server", clients.get(0).getScreen_name() + " sent you a Nudge!",null,null);
 		
 		if(Constants.isPlaySounds())
     		Constants.getAudioPlayer().play(AudioPlayer.NUDGE);
@@ -510,9 +563,122 @@ public class PersonalMessage extends JFrame implements ComponentListener, KeyLis
 	 */
 	public void updateStatus(boolean typing){
 		if(typing){
-			statusLabel.setText(client.getScreen_name() + " is writing a message...");
+			statusLabel.setText(clients.get(0).getScreen_name() + " is writing a message...");
 		}else{
 			statusLabel.setText("");
+		}
+	}
+	
+	/**
+	 * This will adjust the window to be group
+	 * chat enabled.
+	 */
+	public void setGroupChat(){
+		log.setSize(getWidth() -150, getHeight() -171);
+		logContainer.setSize(getWidth() -150, getHeight() -171);
+		
+		chatBox.setSize(getWidth() -15, chatBox.getHeight());
+		chatBoxContainer.setBounds(0, logContainer.getHeight() +21, getWidth() -15, chatBoxContainer.getHeight());
+		
+		fontButton.setBounds(0, getHeight() -171, 50, 20);
+		emoticonButton.setBounds(51, getHeight() -171, 25, 20);
+		nudgeButton.setBounds(77, getHeight() -171, 30, 20);
+		addButton.setBounds(getWidth() -57, getHeight() -171, 20, 20);
+		transferButton.setBounds(getWidth() -36, getHeight() -171, 20, 20);
+		statusLabel.setBounds(115, getHeight() -171, statusLabel.getWidth(), statusLabel.getHeight());
+		
+		clientContainer.setBounds(getWidth() -150, 0, 135, getHeight() - 171);
+		
+		//Disable certain features
+		transferButton.setEnabled(false);
+		nudgeButton.setEnabled(false);
+		
+		this.add(clientContainer);
+	}
+	
+	/**
+	 * Update the client list.
+	 */
+	public void updateClientList(){
+		clientsList.removeAllElements();
+		
+		for(Client c : clients){
+			clientsList.add(c.getScreen_name());
+		}
+		
+		clientList.setListData(clientsList);
+		clientList.repaint();
+	}
+	
+	/**
+	 * Method to add clients to the chat.
+	 * 
+	 * @param client
+	 */
+	public void addClient(Client client){
+		boolean add = true;
+		for(Client c : clients)
+			if(c.getUser_id() == client.getUser_id())
+				add = false;
+		
+		if(add)
+			clients.add(client);
+		
+		if(clients.size() > 1 && !groupChat){
+			groupChat = true;
+			setGroupChat();
+		}
+		
+		updateClientList();
+	}
+	
+	/**
+	 * Remove clients.
+	 * 
+	 * @param client
+	 */
+	public void removeClient(int user_id){
+		Client toRemove = null;
+		
+		for(Client c : clients)
+			if(c.getUser_id() == user_id)
+				toRemove = c;
+		
+		clients.remove(toRemove);
+		toRemove = null;
+		
+		if(clients.size() < 2 && groupChat){
+			groupChat = false;
+			this.remove(clientContainer);
+			log.setSize(getWidth() -15, getHeight() -171);
+			logContainer.setSize(getWidth() -15, getHeight() -171);
+			//Disable certain features
+			transferButton.setEnabled(true);
+			nudgeButton.setEnabled(true);
+		}
+		
+		updateClientList();
+		this.repaint();
+	}
+	
+	/**
+	 * Close the group chat.
+	 */
+	@Override
+	public void windowClosing(WindowEvent e) {
+		clientSend = "";
+		
+		if(groupChat){
+			for(Client c : clients){
+				clientSend += c.getUser_id() + ",";
+			}
+			
+			Constants.getPacketManager().sendPacket(PacketHeaders.GROUP_REMOVE.getHeader() + "º" +
+					Constants.getUser().getUser_id() + "º" +
+					Constants.getUser().getScreen_name() + "º" +
+					clientSend);
+			
+			Constants.removePMWindow(this);
 		}
 	}
 	
@@ -528,5 +694,11 @@ public class PersonalMessage extends JFrame implements ComponentListener, KeyLis
 	public void dragExit(DragSourceEvent arg0) {}
 	public void dragOver(DragSourceDragEvent arg0) {}
 	public void dropActionChanged(DragSourceDragEvent arg0) {}
+	public void windowActivated(WindowEvent arg0) {}
+	public void windowClosed(WindowEvent arg0) {}
+	public void windowDeactivated(WindowEvent arg0) {}
+	public void windowDeiconified(WindowEvent arg0) {}
+	public void windowIconified(WindowEvent arg0) {}
+	public void windowOpened(WindowEvent arg0) {}
 
 }

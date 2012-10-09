@@ -32,14 +32,14 @@ public class AESEncoder {
             byte[] utf8 = str.getBytes("UTF8");
             byte[] enc = ecipher.doFinal(utf8);
 
-            return new sun.misc.BASE64Encoder().encode(enc).replaceAll("\r\n", "");
+            return Encoder.encode(enc).replaceAll("\r\n", "");
         }catch(Exception e){}
         return null;
     }
 
     public String decrypt(String str) {
         try {
-            byte[] dec = new sun.misc.BASE64Decoder().decodeBuffer(str);
+            byte[] dec = Encoder.decodeB(str);
             byte[] utf8 = dcipher.doFinal(dec);
 
             return new String(utf8, "UTF8");

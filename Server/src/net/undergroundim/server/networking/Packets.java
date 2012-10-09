@@ -27,7 +27,7 @@ public class Packets {
 					c.getStatus() + "º" +
 					c.isOnline() + ",";
 		}
-		
+
 		return packet;
 	}
 	
@@ -41,8 +41,11 @@ public class Packets {
 		String packet = PacketHeaders.FRIEND_ADD.getHeader() + "1ª";
 		
 		packet += Constants.getJdbc().getFriendRequests(user_id);
-		
-		return packet;
+
+		if(!packet.equals("9ª1ª"))
+			return packet;
+		else
+			return null;
 	}
 	
 	/**
